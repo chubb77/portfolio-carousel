@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>임베딩 캐러셀 관리자 (하드 코딩 모드)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb;
+        }
+        #root {
+            min-height: 100vh;
+        }
+        /* 캐러셀의 16:9 비율 유지를 위한 CSS */
+        .aspect-16-9 {
+            aspect-ratio: 16 / 9;
+        }
+        /* 썸네일 비율 (가로 16 : 세로 9) */
+        .aspect-w-16 { --tw-aspect-w: 16; }
+        .aspect-h-9 { --tw-aspect-h: 9; }
+        .aspect-w-16.aspect-h-9 {
+            aspect-ratio: var(--tw-aspect-w) / var(--tw-aspect-h);
+        }
+        /* 썸네일 영역을 위한 스크롤바 스타일 (Webkit) */
+        .scrollbar-thin::-webkit-scrollbar {
+            height: 8px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background-color: #9ca3af;
+            border-radius: 4px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <script type="text/babel">
+        const { useState, useEffect, memo } = React;
+        
+        // =========================================================================
+        // ⭐⭐ [핵심] 고객님이 직접 수정해야 할 하드 코딩 영역 (카테고리 및 데이터) ⭐⭐
+        // =========================================================================
+
+        const CATEGORIES = [
+            { id: 'cafe_illust', name: '1. 카페 일러 타입' },
+            { id: 'cafe_diary', name: '2. 카페 다이어리 타입' },
+            { id: 'cafe_general', name: '3. 카페 일반 타입' },
+            { id: 'channel_art', name: '4. 채널 아트' },
+            { id: 'panel_banner', name: '5. 패널/배너' }, 
+            { id: 'rt_poster', name: '6. RT 포스터' }, 
+            { id: 'promo_poster', name: '7. 컨텐츠 홍보 포스터' },
+            { id: 'simple_poster', name: '8. 간단 포스터' },
+            { id: 'general_schedule', name: '9. 일반 스케줄표' },
+            { id: 'mini_schedule', name: '10. 간단 스케줄표' },
+            { id: 'ppt', name: '11. PPT' }, 
+        ];
+
+        // 총 58개의 항목이 JPG 형식으로 업데이트되었습니다.
+        // 이미지 파일 확장자가 JPG로 수정되었습니다.
+        const CAROUSEL_DATA = [
+            // --- 1. 카페 일러 타입 (15개) ---
+            { id: 'cai', category: 'cafe_illust', imageUrl: './images/cai.jpg' }, 
+            { id: 'cai1', category: 'cafe_illust', imageUrl: './images/cai-1.jpg' }, 
+            { id: 'cai2', category: 'cafe_illust', imageUrl: './images/cai-2.jpg' }, 
+            { id: 'cai3', category: 'cafe_illust', imageUrl: './images/cai-3.jpg' }, 
+            { id: 'cai4', category: 'cafe_illust', imageUrl: './images/cai-4.jpg' }, 
+            { id: 'cai5', category: 'cafe_illust', imageUrl: './images/cai-5.jpg' }, 
+            { id: 'cai6', category: 'cafe_illust', imageUrl: './images/cai-6.jpg' }, 
+            { id: 'cai7', category: 'cafe_illust', imageUrl: './images/cai-7.jpg' }, 
+            { id: 'cai8', category: 'cafe_illust', imageUrl: './images/cai-8.jpg' }, 
+            { id: 'cai9', category: 'cafe_illust', imageUrl: './images/cai-9.jpg' }, 
+            { id: 'cai10', category: 'cafe_illust', imageUrl: './images/cai-10.jpg' },
+            { id: 'cai11', category: 'cafe_illust', imageUrl: './images/cai-11.jpg' },
+            { id: 'cai12', category: 'cafe_illust', imageUrl: './images/cai-12.jpg' }, 
+            { id: 'cai13', category: 'cafe_illust', imageUrl: './images/cai-13.jpg' }, 
+            { id: 'cai14', category: 'cafe_illust', imageUrl: './images/cai-14.jpg' }, 
+            
+            // --- 2. 카페 다이어리 타입 (7개) ---
+            { id: 'cad', category: 'cafe_diary', imageUrl: './images/cad.jpg' }, 
+            { id: 'cad1', category: 'cafe_diary', imageUrl: './images/cad-1.jpg' },
+            { id: 'cad2', category: 'cafe_diary', imageUrl: './images/cad-2.jpg' },
+            { id: 'cad3', category: 'cafe_diary', imageUrl: './images/cad-3.jpg' },
+            { id: 'cad4', category: 'cafe_diary', imageUrl: './images/cad-4.jpg' },
+            { id: 'cad5', category: 'cafe_diary', imageUrl: './images/cad-5.jpg' },
+            { id: 'cad6', category: 'cafe_diary', imageUrl: './images/cad-6.jpg' },
+
+            // --- 3. 카페 일반 타입 (8개) ---
+            { id: 'cag', category: 'cafe_general', imageUrl: './images/cag.jpg' }, 
+            { id: 'cag1', category: 'cafe_general', imageUrl: './images/cag-1.jpg' },
+            { id: 'cag2', category: 'cafe_general', imageUrl: './images/cag-2.jpg' },
+            { id: 'cag3', category: 'cafe_general', imageUrl: './images/cag-3.jpg' },
+            { id: 'cag4', category: 'cafe_general', imageUrl: './images/cag-4.jpg' },
+            { id: 'cag5', category: 'cafe_general', imageUrl: './images/cag-5.jpg' },
+            { id: 'cag6', category: 'cafe_general', imageUrl: './images/cag-6.jpg' },
+            { id: 'cag7', category: 'cafe_general', imageUrl: './images/cag-7.jpg' },
+
+            // --- 4. 채널 아트 (5개) ---
+            { id: 'ca', category: 'channel_art', imageUrl: './images/ca.jpg' }, 
+            { id: 'ca1', category: 'channel_art', imageUrl: './images/ca-1.jpg' },
+            { id: 'ca2', category: 'channel_art', imageUrl: './images/ca-2.jpg' },
+            { id: 'ca3', category: 'channel_art', imageUrl: './images/ca-3.jpg' },
+            { id: 'ca4', category: 'channel_art', imageUrl: './images/ca-4.jpg' },
+
+            // --- 5. 패널/배너 (5개) ---
+            { id: 'pb', category: 'panel_banner', imageUrl: './images/pb.jpg' }, 
+            { id: 'pb1', category: 'panel_banner', imageUrl: './images/pb-1.jpg' },
+            { id: 'pb2', category: 'panel_banner', imageUrl: './images/pb-2.jpg' },
+            { id: 'pb3', category: 'panel_banner', imageUrl: './images/pb-3.jpg' },
+            { id: 'pb4', category: 'panel_banner', imageUrl: './images/pb-4.jpg' },
+
+            // --- 6. RT 포스터 (4개) ---
+            { id: 'rtp', category: 'rt_poster', imageUrl: './images/rtp.jpg' }, 
+            { id: 'rtp1', category: 'rt_poster', imageUrl: './images/rtp-1.jpg' },
+            { id: 'rtp2', category: 'rt_poster', imageUrl: './images/rtp-2.jpg' },
+            { id: 'rtp3', category: 'rt_poster', imageUrl: './images/rtp-3.jpg' },
+
+            // --- 7. 컨텐츠 홍보 포스터 (4개) ---
+            { id: 'prp', category: 'promo_poster', imageUrl: './images/prp.jpg' }, 
+            { id: 'prp1', category: 'promo_poster', imageUrl: './images/prp-1.jpg' },
+            { id: 'prp2', category: 'promo_poster', imageUrl: './images/prp-2.jpg' },
+            { id: 'prp3', category: 'promo_poster', imageUrl: './images/prp-3.jpg' },
+
+            // --- 8. 간단 포스터 (2개) ---
+            { id: 'sp', category: 'simple_poster', imageUrl: './images/sp.jpg' }, 
+            { id: 'sp1', category: 'simple_poster', imageUrl: './images/sp-1.jpg' },
+
+            // --- 9. 일반 스케줄표 (2개) ---
+            { id: 'gs', category: 'general_schedule', imageUrl: './images/gs.jpg' }, 
+            { id: 'gs1', category: 'general_schedule', imageUrl: './images/gs-1.jpg' },
+
+            // --- 10. 간단 스케줄표 (2개) ---
+            { id: 'ms', category: 'mini_schedule', imageUrl: './images/ms.jpg' }, 
+            { id: 'ms1', category: 'mini_schedule', imageUrl: './images/ms-1.jpg' },
+
+            // --- 11. PPT (4개) ---
+            { id: 'ppt', category: 'ppt', imageUrl: './images/ppt.jpg' }, 
+            { id: 'ppt1', category: 'ppt', imageUrl: './images/ppt-1.jpg' },
+            { id: 'ppt2', category: 'ppt', imageUrl: './images/ppt-2.jpg' }, 
+            { id: 'ppt3', category: 'ppt', imageUrl: './images/ppt-3.jpg' }, 
+        ];
+        
+        // =========================================================================
+        // ⭐⭐ 하드 코딩 영역 끝 ⭐⭐
+        // =========================================================================
+
+
+        // --- 캐러셀 컴포넌트: 실제 임베딩될 UI (썸네일 영역 포함) ---
+        
+        const Carousel = memo(({ items, categoryTitle }) => {
+            const [currentIndex, setCurrentIndex] = useState(0);
+
+            // 자동 슬라이드 기능
+            useEffect(() => {
+                if (items.length > 1) {
+                    const timer = setInterval(() => {
+                        setCurrentIndex(prevIndex => (prevIndex === items.length - 1 ? 0 : prevIndex + 1));
+                    }, 5000); // 5초마다 자동 슬라이드
+                    return () => clearInterval(timer);
+                }
+            }, [items.length]);
+
+
+            if (items.length === 0) {
+                return (
+                    <div className="text-center p-8 bg-gray-50 text-gray-500 rounded-lg aspect-16-9 flex items-center justify-center">
+                        <p className="text-lg font-medium">현재 "{categoryTitle}" 카테고리에 표시할 이미지가 없습니다.</p>
+                    </div>
+                );
+            }
+
+            const nextSlide = () => {
+                setCurrentIndex((prevIndex) => (prevIndex === items.length - 1 ? 0 : prevIndex + 1));
+            };
+
+            const prevSlide = () => {
+                setCurrentIndex((prevIndex) => (prevIndex === 0 ? items.length - 1 : prevIndex - 1));
+            };
+
+            // 썸네일 클릭 핸들러
+            const handleThumbnailClick = (index) => {
+                setCurrentIndex(index);
+            };
+
+            return (
+                <div className="w-full shadow-2xl rounded-xl bg-white">
+                    
+                    {/* 1. 메인 캐러셀 영역 (16:9 비율 유지) */}
+                    <div className="relative w-full overflow-hidden rounded-t-xl">
+                        
+                        {/* 캐러셀 트랙 */}
+                        <div 
+                        className="flex transition-transform duration-500 ease-in-out aspect-16-9"
+                            style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+                        >
+                            {items.map((item, index) => (
+                                <div key={item.id} className="w-full flex-shrink-0 relative">
+                                    <img 
+                                        src={item.imageUrl} 
+                                        alt={`Slide ${index + 1}`}
+                                        className="w-full h-full object-cover" 
+                                        onError={(e) => {
+                                            e.target.onerror = null;
+                                            // 이미지 로드 실패 시 대체 이미지 (확장자 주의)
+                                            e.target.src = `./images/error.jpg`; 
+                                        }}
+                                    />
+                                    {/* 이미지 설명을 위한 오버레이는 요청에 따라 삭제되었습니다. */}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* 네비게이션 버튼 */}
+                        <button 
+                            onClick={prevSlide} 
+                            className="absolute top-1/2 left-4 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-all shadow-lg z-20 focus:outline-none focus:ring-4 focus:ring-indigo-500/50"
+                            aria-label="Previous slide"
+                        >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </button>
+                        <button 
+                            onClick={nextSlide} 
+                            className="absolute top-1/2 right-4 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-all shadow-lg z-20 focus:outline-none focus:ring-4 focus:ring-indigo-500/50"
+                            aria-label="Next slide"
+                        >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+
+                        {/* 인디케이터 (하단 점들) */}
+                        <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2 z-20">
+                            {items.map((_, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => setCurrentIndex(index)}
+                                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                                        index === currentIndex ?
+                                            'bg-white scale-110' : 'bg-white/50 hover:bg-white/80'
+                                    }`}
+                                    aria-label={`Go to slide ${index + 1}`}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 2. 썸네일 영역 (가로 스크롤) */}
+                    <div className="p-4 pt-3 bg-gray-100/80 rounded-b-xl">
+                        <div className="flex space-x-3 overflow-x-auto p-1 -m-1 scrollbar-thin">
+                            {items.map((item, index) => (
+                                <div 
+                                    key={item.id} 
+                                    onClick={() => handleThumbnailClick(index)}
+                                    className={`flex-shrink-0 cursor-pointer transition-all duration-200 ${
+                                        currentIndex === index 
+                                            ?
+                                            'border-4 border-red-500 rounded-lg shadow-md' 
+                                            : 'border-4 border-transparent hover:border-red-300 rounded-lg'
+                                    }`}
+                                    style={{ width: '120px' }} 
+                                    aria-label={`Thumbnail for slide ${index + 1}`}
+                                >
+                                    {/* 썸네일 이미지 (16:9 비율 유지) */}
+                                    <div className="aspect-w-16 aspect-h-9 w-full overflow-hidden rounded-sm">
+                                        <img 
+                                            src={item.imageUrl} 
+                                            alt={`Thumbnail ${index + 1}`} 
+                                            className="w-full h-full object-cover" 
+                                            onError={(e) => {
+                                                e.target.onerror = null;
+                                                e.target.src = './images/error-thumb.jpg'; // 썸네일 오류 이미지 대체 (확장자 주의)
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        });
+        
+        // --- 메인 앱 컴포넌트 ---
+
+        function App() {
+            
+            const categories = CATEGORIES; 
+            
+            const [selectedCategoryForPreview, setSelectedCategoryForPreview] = useState(categories.length > 0 ? categories[0].id : '');
+            
+            const filteredItems = CAROUSEL_DATA.filter(item => item.category === selectedCategoryForPreview);
+            const currentCategoryTitle = categories.find(c => c.id === selectedCategoryForPreview)?.name || '카테고리 선택 안 됨';
+
+            // IMPORTANT: GitHub Pages URL은 사용자가 직접 교체해야 합니다.
+            const embedCodeHtml = `<iframe src="[여기에 당신의 GitHub Pages 주소를 넣으세요]?embed=true&category=${selectedCategoryForPreview}" width="100%" height="450px" frameborder="0" allowfullscreen></iframe>`;
+
+
+            // --- UI 렌더링 ---
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const isEmbedMode = urlParams.get('embed') === 'true';
+            const embedCategory = urlParams.get('category');
+
+            // 임베드 모드 (실제 다른 페이지에 삽입될 때)
+            if (isEmbedMode && embedCategory) {
+                const embedItems = CAROUSEL_DATA.filter(item => item.category === embedCategory);
+                const embedCategoryTitle = categories.find(c => c.id === embedCategory)?.name || 'Gallery';
+                
+                // 임베드 모드에서는 마진과 패딩을 없애 꽉 찬 화면을 제공합니다.
+                return (
+                    <div className="p-0 m-0 w-full h-full">
+                        <Carousel items={embedItems} categoryTitle={embedCategoryTitle} />
+                    </div>
+                );
+            }
+
+            // 관리자 모드
+            return (
+                <div className="min-h-screen bg-gray-50 p-4 sm:p-8 font-sans">
+                    <h1 className="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">
+                        💾 캐러셀 관리자 대시보드 (하드 코딩)
+                    </h1>
+                    <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-xl shadow-lg" role="alert">
+                         <p className="font-bold">✅ 최종 파일 구조 확인</p>
+                         <p className="text-sm mt-1">
+                            **`index.html`** 파일과 **`images`** 폴더를 GitHub에 푸시하십시오.<br/>
+                            **총 11개 카테고리, 58개 항목 (JPG 확장자)**이 로드됩니다.
+                        </p>
+                    </div>
+
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        {/* 섹션 1: 카테고리 관리 (미리보기 선택) */}
+                        <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-fit">
+                            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                                <svg className="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                                카테고리 목록 ({categories.length}개)
+                            </h2>
+                            <p className="text-xs text-red-500 mb-3">
+                                *미리보기 카테고리를 선택하세요.
+                            </p>
+                            <div className="space-y-3">
+                                {categories.map(cat => (
+                                    <div key={cat.id} 
+                                        className={`p-3 rounded-xl flex justify-between items-center transition-all cursor-pointer ${
+                                             selectedCategoryForPreview === cat.id ?
+                                                'bg-indigo-100 border-indigo-500 border-2 shadow-md' : 'bg-gray-50 border border-gray-200 hover:bg-gray-100'
+                                         }`}
+                                         onClick={() => setSelectedCategoryForPreview(cat.id)}
+                                    >
+                                        <span className="font-medium text-gray-700">{cat.name}</span>
+                                        <span className="text-sm text-gray-500">({CAROUSEL_DATA.filter(item => item.category === cat.id).length} 항목)</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* 섹션 2: 데이터 확인 및 임베드 코드 */}
+                        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+                            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                                <svg className="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 0v2m3-2v2M9 7h.01M12 7h.01M15 7h.01M12 3v1m-4 5H2m14-5v1m-2 5h6m-4 5v1m-2-5h6"></path></svg>
+                                캐러셀 미리보기: {currentCategoryTitle}
+                            </h2>
+                            <div className="mb-8">
+                                <Carousel items={filteredItems} categoryTitle={currentCategoryTitle} />
+                            </div>
+                            
+                            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center pt-4 border-t">
+                                <svg className="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4m-4 4l4 4M6 20l4-16M6 4l4 4m-4 4l4 4"></path></svg>
+                                임베딩 코드 생성 (HTML Iframe)
+                            </h2>
+                            <p className="text-sm text-gray-600 mb-3">
+                                다른 사이트에 캐러셀을 삽입하려면, 이 코드를 복사하여 붙여넣으세요. (W: 800px, H: 450px)
+                            </p>
+                            <div className="relative">
+                                <textarea
+                                    readOnly
+                                    value={embedCodeHtml.replace('[여기에 당신의 GitHub Pages 주소를 넣으세요]', 'YOUR_GITHUB_PAGES_URL_HERE')}
+                                    rows="4"
+                                    className="w-full p-3 border border-gray-300 bg-gray-50 rounded-lg font-mono text-xs resize-none"
+                                ></textarea>
+                                <button 
+                                    onClick={() => {
+                                        const textarea = document.createElement('textarea');
+                                        textarea.value = embedCodeHtml.replace('[여기에 당신의 GitHub Pages 주소를 넣으세요]', 'YOUR_GITHUB_PAGES_URL_HERE');
+                                        document.body.appendChild(textarea);
+                                        textarea.select();
+                                        document.execCommand('copy');
+                                        document.body.removeChild(textarea);
+                                        alert('임베딩 코드가 클립보드에 복사되었습니다. GitHub Pages 주소로 교체하세요!');
+                                    }}
+                                    className="absolute top-2 right-2 bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded-lg text-xs"
+                                >
+                                    코드 복사
+                                </button>
+                            </div>
+                            <p className="text-xs text-red-500 mt-2">
+                                **주의:** `[여기에 당신의 GitHub Pages 주소를 넣으세요]` 부분을 당신의 **GitHub Pages 주소**로 바꿔야 합니다.
+                            </p>
+                        </div>
+                    
+                        {/* 섹션 3: 전체 아이템 데이터 확인 */}
+                        <div className="lg:col-span-3">
+                            <div className="bg-white p-6 rounded-xl shadow-lg mt-8">
+                                <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                                    <svg className="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    현재 하드 코딩된 전체 아이템 ({CAROUSEL_DATA.length}개)
+                                </h2>
+                                
+                                <p className="text-xs text-red-500 mb-3">
+                                    *아이템을 추가/수정/삭제하려면 **코드 내의 `CAROUSEL_DATA` 배열**을 수정하고 재배포해야 합니다.
+                                </p>
+                                
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                                    {CAROUSEL_DATA.length === 0 ?
+                                        (
+                                            <p className="col-span-full p-8 text-center text-gray-500 border border-dashed rounded-lg">하드 코딩된 아이템이 없습니다. `CAROUSEL_DATA`에 아이템을 추가해 주세요.</p>
+                                        ) : (
+                                            CAROUSEL_DATA.map((item) => {
+                                                const categoryName = categories.find(c => c.id === item.category)?.name || '없음';
+                                                
+                                                return (
+                                                    <div key={item.id} className="relative bg-gray-50 rounded-lg shadow-md overflow-hidden">
+                                                        {/* 이미지 썸네일 (16:9 비율 유지) */}
+                                                        <div className="aspect-w-16 aspect-h-9 w-full overflow-hidden">
+                                                            <img 
+                                                                src={item.imageUrl}
+                                                                alt="Preview"
+                                                                className="w-full h-full object-cover" 
+                                                                onError={(e) => {
+                                                                    e.target.onerror = null;
+                                                                    e.target.src = './images/error-thumb.jpg';
+                                                                }}
+                                                            />
+                                                        </div>
+
+                                                        {/* 정보 */}
+                                                        <div className="p-3 text-sm">
+                                                            <div className={`px-2 py-1 inline-flex text-xs leading-none font-semibold rounded-full mb-1 ${
+                                                                item.category === selectedCategoryForPreview ?
+                                                                    'bg-indigo-200 text-indigo-900' : 'bg-gray-200 text-gray-700'
+                                                            }`}>
+                                                                {categoryName}
+                                                            </div>
+                                                            <p className="text-xs text-gray-700 font-medium truncate mb-2" title={item.description || '설명 없음'}>
+                                                                {/* Description 제거에 따라 빈 줄로 대체 */}
+                                                                &nbsp;
+                                                            </p>
+                                                            <p className="text-xs text-gray-500 truncate">ID: {item.id}</p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // React 18 렌더링
+        const rootContainer = document.getElementById('root');
+        if (rootContainer) {
+            const root = ReactDOM.createRoot(rootContainer);
+            root.render(<App />);
+        } else {
+            console.error("Root element 'root' not found in the document.");
+        }
+    </script>
+</body>
+
+</html>
