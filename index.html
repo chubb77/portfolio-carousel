@@ -42,7 +42,7 @@
 
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
     
     <script type="text/babel">
         const { useState, useEffect, memo } = React;
@@ -299,6 +299,7 @@
             const currentCategoryTitle = categories.find(c => c.id === selectedCategoryForPreview)?.name || '카테고리 선택 안 됨';
 
             // IMPORTANT: GitHub Pages URL은 사용자가 직접 교체해야 합니다.
+        
             const embedCodeHtml = `<iframe src="[여기에 당신의 GitHub Pages 주소를 넣으세요]?embed=true&category=${selectedCategoryForPreview}" width="100%" height="450px" frameborder="0" allowfullscreen></iframe>`;
 
 
